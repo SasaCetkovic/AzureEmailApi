@@ -1,0 +1,21 @@
+﻿{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\ProjectsV13;Database=EmailServiceDB;Trusted_Connection=True;MultipleActiveResultSets=true"
+  },
+
+  "RabbitMQ": {
+    "HostName": "192.168.0.11",
+    "QueueName": "testing",
+    "Username": "user",
+    "Password": "password",
+    "Durable": true
+  },
+
+  "SmtpServer": {
+    "Host": "smtp.sendgrid.net",
+    "Port": "587",
+    "Username": "sendgrid_username",
+    "Password": "sendgrid_password",
+    "EnableSsl": "true"
+  }
+}
