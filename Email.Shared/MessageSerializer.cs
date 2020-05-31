@@ -1,13 +1,9 @@
-﻿using Email.Shared.DTO;
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
 
 namespace Email.Shared
 {
-    public static class MessageSerializer
+	public static class MessageSerializer
     {
 		public static byte[] SerializeIntoBinary(object dto)
 		{

@@ -34,12 +34,10 @@ namespace Email.Sender
 				}
 				////catch (SmtpException ex)
 				////{
-				////	await Repository.PersistFailedMessage(request, ex);
 				////	return false;
 				////}
 				catch (Exception ex)
 				{
-					await Repository.PersistFailedMessage(request, ex);
 					return false;
                 }
 

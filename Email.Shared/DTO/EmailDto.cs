@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 
 namespace Email.Shared.DTO
 {
 	[Serializable]
     public class EmailDto
     {
-		public long Id { get; set; }
+		public Guid Id { get; set; }
 
 		public string Sender { get; set; }
 

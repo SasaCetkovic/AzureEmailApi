@@ -1,15 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using Email.Api.Models;
 using Email.Api.Models.Enums;
 using Email.Api.Models.Requests;
 using Email.Shared;
-using Email.Shared.Data;
-using Email.Shared.Data.Entities;
-using Email.Shared.Data.Enums;
 using Email.Shared.DTO;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using System;
 using System.Threading.Tasks;
 using static Email.Shared.MessageSerializer;
@@ -18,7 +14,7 @@ namespace Email.Api.Services
 {
 	public interface IRabbitService
 	{
-		Task<ApiResponse<long>> QueueAsync(string clientName, SendEmailRequest request);
+		Task<ApiResponse<Guid>> QueueAsync(string clientName, SendEmailRequest request);
 	}
 
 
@@ -29,8 +25,6 @@ namespace Email.Api.Services
 		private static readonly RabbitConfig _config;
 
 		private readonly ILogger _logger;
-		private readonly EmailDbContext _dbContext;
-		private readonly DbSet<EmailTrail> _emails;
 
 		static RabbitService()
 		{
@@ -40,67 +34,42 @@ namespace Email.Api.Services
 			_connection = _connectionFactory.CreateConnection();
 		}
 
-		public RabbitService(EmailDbContext dbContext, ILoggerFactory logger)
+		public RabbitService(ILoggerFactory logger)
 		{
 			_logger = logger.CreateLogger<RabbitService>();
-			_emails = dbContext.Set<EmailTrail>();
-			_dbContext = dbContext;
 		}
 
 
-		public async Task<ApiResponse<long>> QueueAsync(string clientName, SendEmailRequest request)
+		public Task<ApiResponse<Guid>> QueueAsync(string clientName, SendEmailRequest request)
 		{
-			var trail = new EmailTrail
-			{
-				RequestOrigin = clientName,
-				Status = EmailStatus.RequestReceived
-			};
+			var trailId = Guid.NewGuid();
 
 			try
 			{
-				await _emails.AddAsync(trail);
-				await _dbContext.SaveChangesAsync();
-
-				var dto = BuildDto(trail.Id, request);
+				var dto = BuildDto(trailId, request);
 				var success = SendToQueue(dto);
 
 				if (success)
 				{
 					_logger.LogInformation("Email added to queue (ID {id})", dto.Id);
-					trail.Status = EmailStatus.InQueue;
-					trail.UpdatedDateTime = DateTime.UtcNow;
 				}
 				else
 				{
 					_logger.LogWarning("Failed to add email to queue; client: {client}", clientName);
-					_logger.LogInformation("Saving email data to database (ID {id})...", dto.Id);
-					trail.Status = EmailStatus.FailedToQueue;
-					trail.UpdatedDateTime = DateTime.UtcNow;
-					trail.Failed = new Failed
-					{
-						Receiver = dto.Receiver,
-						Sender = dto.Sender,
-						Subject = dto.Subject,
-						Body = dto.Body,
-						CreatedDateTime = DateTime.UtcNow,
-					};
 				}
 
-				_emails.Update(trail);
-				await _dbContext.SaveChangesAsync();
-
-				return new ApiResponse<long>(trail.Id);
+				return Task.FromResult(new ApiResponse<Guid>(trailId));
 
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Exception caught while trying to process a request from client {0}; email trail ID: {1}", clientName, trail.Id);
-				return new ApiResponse<long>(new Error(ErrorCode.UnhandledException));
+				_logger.LogError(ex, "Exception caught while trying to process a request from client {0}; email trail ID: {1}", clientName, trailId);
+				return Task.FromResult(new ApiResponse<Guid>(new Error(ErrorCode.UnhandledException)));
 			}
 		}
 
 
-		private EmailDto BuildDto(long id, SendEmailRequest request) => new EmailDto
+		private EmailDto BuildDto(Guid id, SendEmailRequest request) => new EmailDto
 		{
 			Id = id,
 			Sender = request.Sender,

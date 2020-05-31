@@ -32,7 +32,6 @@ namespace Email.Sender
 			config.GetSection("SmtpServer").Bind(emailSettings);
 
 			EmailSender.Init(emailSettings);
-			Repository.Init(config.GetConnectionString("DefaultConnection"));
 		}
 
 
@@ -46,32 +45,6 @@ namespace Email.Sender
 			_channel.BasicConsume(queue: _rmqConfig.QueueName,
 								 autoAck: false,
 								 consumer: _consumer);
-		}
-
-
-		public static void TryResendFailed()
-		{
-			var failed = Repository.GetFailed();
-			foreach (var f in failed)
-			{
-				if (!Repository.EmailSent(f.Id))
-				{
-					var dto = new EmailDto { Id = f.Id, Body = f.Body, Receiver = f.Receiver, Sender = f.Sender, Subject = f.Subject };
-
-					try
-					{
-						var success = EmailSender.SendAsync(dto).Result;
-						if (success)
-						{
-							Repository.UpdateTrailStatus(dto.Id, success).Wait();
-						}
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine(ex);
-					}
-				}
-			}
 		}
 
 
@@ -97,19 +70,14 @@ namespace Email.Sender
 			{
 				var message = DeserialiseFromBinary<EmailDto>(ea.Body);
 
-				if (!await Repository.EmailSentAsync(message.Id))
-				{
-					success = await EmailSender.SendAsync(message);
-				}
+				success = await EmailSender.SendAsync(message);
 
 				if (success)
 				{
 					_channel.BasicAck(ea.DeliveryTag, false);
-					await Repository.UpdateTrailStatus(message.Id, success); 
 				}
 				else
 				{
-					// status already set to FailedToSend
 					_channel.BasicNack(ea.DeliveryTag, false, true);
 				}
 			}

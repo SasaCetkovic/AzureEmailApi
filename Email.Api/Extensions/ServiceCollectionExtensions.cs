@@ -1,4 +1,3 @@
-using Bazinga.AspNetCore.Authentication.Basic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.PlatformAbstractions;
@@ -25,9 +24,7 @@ namespace Email.Api.Extensions
 
 		public static IServiceCollection ConfigureCustomDependencies(this IServiceCollection services)
 		{
-			services.AddScoped<IBasicCredentialVerifier, AuthService>();
 			services.AddScoped<IRabbitService, RabbitService>();
-			services.AddScoped<IStatusService, StatusService>();
 
 			return services;
 		}
